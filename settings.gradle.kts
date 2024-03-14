@@ -1,10 +1,10 @@
 pluginManagement {
   plugins {
-    id("com.github.jk1.dependency-license-report") version "2.5"
+    id("com.github.jk1.dependency-license-report") version "2.6"
     id("com.google.cloud.tools.jib") version "3.4.1"
     id("com.gradle.plugin-publish") version "1.2.1"
     id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
-    id("org.jetbrains.kotlin.jvm") version "1.9.22"
+    id("org.jetbrains.kotlin.jvm") version "1.9.23"
     id("org.xbib.gradle.plugin.jflex") version "3.0.2"
     id("org.unbroken-dome.xjc") version "2.0.0"
     id("org.graalvm.buildtools.native") version "0.10.1"
@@ -191,9 +191,12 @@ include(":instrumentation:cassandra:cassandra-4.4:library")
 include(":instrumentation:cassandra:cassandra-4.4:testing")
 include(":instrumentation:cassandra:cassandra-4-common:testing")
 include(":instrumentation:cdi-testing")
-include(":instrumentation:graphql-java-12.0:javaagent")
-include(":instrumentation:graphql-java-12.0:library")
-include(":instrumentation:graphql-java-12.0:testing")
+include(":instrumentation:graphql-java:graphql-java-12.0:javaagent")
+include(":instrumentation:graphql-java:graphql-java-12.0:library")
+include(":instrumentation:graphql-java:graphql-java-20.0:javaagent")
+include(":instrumentation:graphql-java:graphql-java-20.0:library")
+include(":instrumentation:graphql-java:graphql-java-common:library")
+include(":instrumentation:graphql-java:graphql-java-common:testing")
 include(":instrumentation:internal:internal-application-logger:bootstrap")
 include(":instrumentation:internal:internal-application-logger:javaagent")
 include(":instrumentation:internal:internal-class-loader:javaagent")
@@ -318,6 +321,7 @@ include(":instrumentation:jedis:jedis-4.0:javaagent")
 include(":instrumentation:jedis:jedis-common:javaagent")
 include(":instrumentation:jetty:jetty-8.0:javaagent")
 include(":instrumentation:jetty:jetty-11.0:javaagent")
+include(":instrumentation:jetty:jetty-12.0:javaagent")
 include(":instrumentation:jetty:jetty-common:javaagent")
 include(":instrumentation:jetty-httpclient:jetty-httpclient-9.2:javaagent")
 include(":instrumentation:jetty-httpclient:jetty-httpclient-9.2:library")
@@ -500,6 +504,8 @@ include(":instrumentation:servlet:servlet-3.0:javaagent")
 include(":instrumentation:servlet:servlet-3.0:javaagent-unit-tests")
 include(":instrumentation:servlet:servlet-5.0:javaagent")
 include(":instrumentation:servlet:servlet-5.0:javaagent-unit-tests")
+include(":instrumentation:servlet:servlet-5.0:jetty12-testing")
+include(":instrumentation:servlet:servlet-5.0:testing")
 include(":instrumentation:spark-2.3:javaagent")
 include(":instrumentation:spring:spring-batch-3.0:javaagent")
 include(":instrumentation:spring:spring-boot-actuator-autoconfigure-2.0:javaagent")
@@ -570,7 +576,15 @@ include(":instrumentation:vertx:vertx-web-3.0:testing")
 include(":instrumentation:vibur-dbcp-11.0:javaagent")
 include(":instrumentation:vibur-dbcp-11.0:library")
 include(":instrumentation:vibur-dbcp-11.0:testing")
+include(":instrumentation:wicket-8.0:common-testing")
 include(":instrumentation:wicket-8.0:javaagent")
+include(":instrumentation:wicket-8.0:wicket8-testing")
+include(":instrumentation:wicket-8.0:wicket10-testing")
+include(":instrumentation:xxl-job:xxl-job-1.9.2:javaagent")
+include(":instrumentation:xxl-job:xxl-job-2.1.2:javaagent")
+include(":instrumentation:xxl-job:xxl-job-2.3.0:javaagent")
+include(":instrumentation:xxl-job:xxl-job-common:javaagent")
+include(":instrumentation:xxl-job:xxl-job-common:testing")
 include(":instrumentation:zio:zio-2.0:javaagent")
 
 // benchmark

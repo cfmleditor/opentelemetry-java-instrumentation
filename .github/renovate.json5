@@ -13,7 +13,9 @@
   "packageRules": [
     {
       "matchPackageNames": [
+        "io.opentelemetry.contrib:opentelemetry-aws-resources",
         "io.opentelemetry.contrib:opentelemetry-aws-xray-propagator",
+        "io.opentelemetry.contrib:opentelemetry-gcp-resources",
         "io.opentelemetry.proto:opentelemetry-proto",
         "io.opentelemetry.semconv:opentelemetry-semconv"
       ],
@@ -21,7 +23,8 @@
       // major.minor.patch, under the assumption that you would want to update to the stable version
       // of that release instead of the unstable version for a future release
       // (TODO remove once the artifacts above release stable versions)
-      "ignoreUnstable": false
+      "ignoreUnstable": false,
+      "allowedVersions": "!/\\-SNAPSHOT$/"
     },
     {
       "matchPackagePrefixes": ["ch.qos.logback:"],
