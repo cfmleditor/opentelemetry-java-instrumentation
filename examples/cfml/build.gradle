@@ -11,10 +11,10 @@ plugins {
   See https://imperceptiblethoughts.com/shadow/ for more details about Shadow plugin.
    */
   id "com.github.johnrengelman.shadow" version "8.1.1"
-  // id "com.diffplug.spotless" version "6.25.0"
+  id "com.diffplug.spotless" version "6.25.0"
 
-  // id "io.opentelemetry.instrumentation.muzzle-generation" version "2.3.0-alpha-SNAPSHOT"
-  // id "io.opentelemetry.instrumentation.muzzle-check" version "2.3.0-alpha-SNAPSHOT"
+  id "io.opentelemetry.instrumentation.muzzle-generation" version "2.3.0-alpha-SNAPSHOT"
+  id "io.opentelemetry.instrumentation.muzzle-check" version "2.3.0-alpha-SNAPSHOT"
 }
 
 group 'io.opentelemetry.example'
@@ -54,16 +54,17 @@ configurations {
   otel
 }
 
-// spotless {
-//   java {
-//     googleJavaFormat()
-//     licenseHeaderFile(rootProject.file("../../buildscripts/spotless.license.java"), "(package|import|public)")
-//     target("src/**/*.java")
-//   }
-// }
+spotless {
+  java {
+    googleJavaFormat()
+    licenseHeaderFile(rootProject.file("../../buildscripts/spotless.license.java"), "(package|import|public)")
+    target("src/**/*.java")
+  }
+}
 
 dependencies {
   implementation(platform("io.opentelemetry:opentelemetry-bom:${versions.opentelemetrySdk}"))
+  implementation("org.slf4j:slf4j-api:2.0.13")
 
   // these serve as a test of the instrumentation boms
   implementation(platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom:${versions.opentelemetryJavaagent}"))
@@ -113,11 +114,11 @@ dependencies {
   //Otel Java instrumentation that we use and extend during integration tests
   otel("io.opentelemetry.javaagent:opentelemetry-javaagent:${versions.opentelemetryJavaagent}")
 
-  //TODO remove when start using io.opentelemetry.instrumentation.javaagent-instrumentation plugin
-  // add("codegen", "io.opentelemetry.javaagent:opentelemetry-javaagent-tooling:${versions.opentelemetryJavaagentAlpha}")
-  // add("muzzleBootstrap", "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations-support:${versions.opentelemetryJavaagentAlpha}")
-  // add("muzzleTooling", "io.opentelemetry.javaagent:opentelemetry-javaagent-extension-api:${versions.opentelemetryJavaagentAlpha}")
-  // add("muzzleTooling", "io.opentelemetry.javaagent:opentelemetry-javaagent-tooling:${versions.opentelemetryJavaagentAlpha}")
+  // TODO remove when start using io.opentelemetry.instrumentation.javaagent-instrumentation plugin
+  add("codegen", "io.opentelemetry.javaagent:opentelemetry-javaagent-tooling:${versions.opentelemetryJavaagentAlpha}")
+  add("muzzleBootstrap", "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations-support:${versions.opentelemetryJavaagentAlpha}")
+  add("muzzleTooling", "io.opentelemetry.javaagent:opentelemetry-javaagent-extension-api:${versions.opentelemetryJavaagentAlpha}")
+  add("muzzleTooling", "io.opentelemetry.javaagent:opentelemetry-javaagent-tooling:${versions.opentelemetryJavaagentAlpha}")
 }
 
 //Produces a copy of upstream javaagent with this extension jar included inside it
@@ -159,17 +160,17 @@ tasks {
   assemble.dependsOn(shadowJar)
 }
 
-// muzzle {
-//   pass {
-//     group.set("javax.servlet")
-//     module.set("javax.servlet-api")
-//     versions.set("[3.0,)")
-//     assertInverse.set(true)
-//   }
-//   pass {
-//     group.set("javax.servlet")
-//     module.set("servlet-api")
-//     versions.set("[2.2, 3.0)")
-//     assertInverse.set(true)
-//   }
-// }
+muzzle {
+  pass {
+    group.set("javax.servlet")
+    module.set("javax.servlet-api")
+    versions.set("[3.0,)")
+    assertInverse.set(true)
+  }
+  pass {
+    group.set("javax.servlet")
+    module.set("servlet-api")
+    versions.set("[2.2, 3.0)")
+    assertInverse.set(true)
+  }
+}

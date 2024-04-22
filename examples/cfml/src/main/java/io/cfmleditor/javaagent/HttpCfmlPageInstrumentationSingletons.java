@@ -5,29 +5,19 @@
 
 package io.cfmleditor.javaagent;
 
-import static java.util.logging.Level.WARNING;
-
+import coldfusion.filter.FusionContext;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.instrumentation.api.instrumenter.AttributesExtractor;
 import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter;
-import io.opentelemetry.instrumentation.api.instrumenter.SpanKindExtractor;
-import io.opentelemetry.javaagent.bootstrap.internal.ExperimentalConfig;
 import io.opentelemetry.javaagent.bootstrap.internal.InstrumentationConfig;
-import io.cfmleditor.javaagent.HttpCfmlPageInstrumentationSingletons;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.logging.Logger;
 import javax.annotation.Nullable;
-import javax.servlet.RequestDispatcher;
-import coldfusion.filter.FusionContext;
 
 public class HttpCfmlPageInstrumentationSingletons {
   private static final boolean CAPTURE_EXPERIMENTAL_SPAN_ATTRIBUTES =
       InstrumentationConfig.get()
-          .getBoolean("otel.instrumentation.acf.experimental-span-attributes", false);
+          .getBoolean("io.cfmleditor.javaagent.experimental-span-attributes", false);
 
   private static final Instrumenter<FusionContext, Void> INSTRUMENTER;
 
@@ -35,7 +25,7 @@ public class HttpCfmlPageInstrumentationSingletons {
     INSTRUMENTER =
         Instrumenter.<FusionContext, Void>builder(
                 GlobalOpenTelemetry.get(),
-                "io.opentelemetry.cfml",
+                "io.cfmleditor.javaagent",
                 HttpCfmlPageInstrumentationSingletons::spanNameOnRender)
             .addAttributesExtractor(new RenderAttributesExtractor())
             .setEnabled(true)
@@ -80,7 +70,8 @@ public class HttpCfmlPageInstrumentationSingletons {
       // // normalizing the URL should remove those symbols for readability and consistency
       // try {
       //   attributes.put(
-      //       "jsp.requestURL", new URI(request.getRequestURL().toString()).normalize().toString());
+      //       "jsp.requestURL", new
+      // URI(request.getRequestURL().toString()).normalize().toString());
       // } catch (URISyntaxException e) {
       //   Logger.getLogger(HttpJspPage.class.getName())
       //       .log(WARNING, "Failed to get and normalize request URL: {0}", e.getMessage());
