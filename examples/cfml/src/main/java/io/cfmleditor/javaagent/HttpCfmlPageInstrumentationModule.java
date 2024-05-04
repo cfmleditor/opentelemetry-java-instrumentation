@@ -21,14 +21,14 @@ public final class HttpCfmlPageInstrumentationModule extends InstrumentationModu
   public HttpCfmlPageInstrumentationModule() {
     super("acf", "cfml");
   }
-  
-  @Override
-  public ElementMatcher.Junction<ClassLoader> classLoaderMatcher() {
-    return hasClassesNamed("coldfusion.runtime.CfJspPage");
-  }
 
   @Override
   public List<TypeInstrumentation> typeInstrumentations() {
     return singletonList(new HttpCfmlPageInstrumentation());
+  }
+
+  @Override
+  public boolean isHelperClass(String className) {
+    return className.startsWith("io.cfmleditor.javaagent");
   }
 }

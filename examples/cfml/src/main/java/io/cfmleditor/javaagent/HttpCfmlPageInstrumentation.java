@@ -46,11 +46,15 @@ public class HttpCfmlPageInstrumentation implements TypeInstrumentation {
         @Advice.Local("otelContext") Context context,
         @Advice.Local("otelScope") Scope scope) {
 
-      // System.out.printf("CfJspPageAdvice");
-      context = instrumenter().start(context, req);
-      if (context != null) {
-        scope = context.makeCurrent();
+      Context parentContext =
+          io.opentelemetry.javaagent.bootstrap.Java8BytecodeBridge.currentContext();
+      if (!instrumenter().shouldStart(parentContext, req)) {
+        return;
       }
+
+      // System.out.printf("CfJspPageAdvice");
+      context = instrumenter().start(parentContext, req);
+      scope = context.makeCurrent();
     }
 
     @Advice.OnMethodExit(onThrowable = Throwable.class, suppress = Throwable.class)
