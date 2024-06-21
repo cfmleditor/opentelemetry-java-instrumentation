@@ -40,10 +40,10 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17.0.6
+          java-version-file: .java-version
 
       - name: Set up Gradle cache
-        uses: gradle/gradle-build-action@v3
+        uses: gradle/actions/setup-gradle@dbbdc275be76ac10734476cc723d82dfe7ec6eda # v3.4.2
         with:
           cache-read-only: true
 

@@ -38,6 +38,18 @@ To run these tests locally, add `-PtestLatestDeps=true` to your existing `gradle
 
 Executing `./gradlew :instrumentation:<INSTRUMENTATION_NAME>:test --tests <GROOVY TEST FILE NAME>` will run only the selected test.
 
+### How to prevent linting and formatting warnings from failing tests
+
+During local development, you may want to ignore lint warnings when running tests.
+
+To ignore warnings, formatting issues, or other non-fatal issues in tests, use
+
+```
+./gradlew test -Ddev=true -x spotlessCheck -x checkstyleMain
+```
+
+The `dev` flag will ignore warnings in tests.
+
 ## Smoke tests
 
 The smoke tests are not run as part of a global `test` task run since they take a long time and are
@@ -61,7 +73,7 @@ If you want to run a specific smoke test:
 ./gradlew :smoke-tests:test --tests '*SpringBootSmokeTest*'
 ```
 
-# Smoke OpenTelemetry starter tests
+## Smoke OpenTelemetry starter tests
 
 Smoke tests for the [OpenTelemetry Spring starter](../../instrumentation/spring/starters/spring-boot-starter/README.md).
 
@@ -82,6 +94,14 @@ To execute all the instrumentation tests runnable as GraalVM native executables:
 Some of the instrumentation tests (and all of the smoke tests) spin up docker containers via
 [testcontainers](https://www.testcontainers.org/). If you run out of space, you may wish to prune
 old containers, images and volumes using `docker system prune --volumes`.
+
+## Configuring Docker alternative
+
+For some container environments, such as rootless Podman or a remotely hosted Docker,
+testcontainers may need additional configuration to successfully run the tests.
+The following environment variables can be used for configuration:
+ - `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE` - The location of the Docker socket on the host. Default is `/var/run/docker.sock`
+ - `TESTCONTAINERS_HOST_OVERRIDE` - The hostname used for container-to-container communication. Default Docker is `localhost`, but rootless Podman uses `host.containers.internal`
 
 # Troubleshooting CI Test Failures
 

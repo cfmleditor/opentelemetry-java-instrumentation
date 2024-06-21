@@ -45,7 +45,20 @@ val v1_32Deps by configurations.creating {
   exclude("io.opentelemetry", "opentelemetry-bom")
   exclude("io.opentelemetry", "opentelemetry-bom-alpha")
 }
-
+val v1_37Deps by configurations.creating {
+  isCanBeResolved = true
+  isCanBeConsumed = false
+  // exclude the bom added by dependencyManagement
+  exclude("io.opentelemetry", "opentelemetry-bom")
+  exclude("io.opentelemetry", "opentelemetry-bom-alpha")
+}
+val v1_38Deps by configurations.creating {
+  isCanBeResolved = true
+  isCanBeConsumed = false
+  // exclude the bom added by dependencyManagement
+  exclude("io.opentelemetry", "opentelemetry-bom")
+  exclude("io.opentelemetry", "opentelemetry-bom-alpha")
+}
 // configuration for publishing the shadowed artifact
 val v1_10 by configurations.creating {
   isCanBeConsumed = true
@@ -64,6 +77,14 @@ val v1_31 by configurations.creating {
   isCanBeResolved = false
 }
 val v1_32 by configurations.creating {
+  isCanBeConsumed = true
+  isCanBeResolved = false
+}
+val v1_37 by configurations.creating {
+  isCanBeConsumed = true
+  isCanBeResolved = false
+}
+val v1_38 by configurations.creating {
   isCanBeConsumed = true
   isCanBeResolved = false
 }
@@ -111,6 +132,19 @@ dependencies {
       }
     }
   }
+
+  listOf("opentelemetry-api-incubator").forEach {
+    v1_37Deps("io.opentelemetry:$it") {
+      version {
+        strictly("1.37.0-alpha")
+      }
+    }
+    v1_38Deps("io.opentelemetry:$it") {
+      version {
+        strictly("1.38.0-alpha")
+      }
+    }
+  }
 }
 
 // OpenTelemetry API shaded so that it can be used in instrumentation of OpenTelemetry API itself,
@@ -145,6 +179,14 @@ tasks {
     configurations = listOf(v1_32Deps)
     archiveClassifier.set("v1_32")
   }
+  val v1_37Shadow by registering(ShadowJar::class) {
+    configurations = listOf(v1_37Deps)
+    archiveClassifier.set("v1_37")
+  }
+  val v1_38Shadow by registering(ShadowJar::class) {
+    configurations = listOf(v1_38Deps)
+    archiveClassifier.set("v1_38")
+  }
 
   artifacts {
     add(v1_10.name, v1_10Shadow)
@@ -152,5 +194,7 @@ tasks {
     add(v1_27.name, v1_27Shadow)
     add(v1_31.name, v1_31Shadow)
     add(v1_32.name, v1_32Shadow)
+    add(v1_37.name, v1_37Shadow)
+    add(v1_38.name, v1_38Shadow)
   }
 }

@@ -9,7 +9,10 @@ import com.google.auto.value.AutoValue;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.instrumentation.api.internal.HttpConstants;
-import io.opentelemetry.semconv.SemanticAttributes;
+import io.opentelemetry.semconv.HttpAttributes;
+import io.opentelemetry.semconv.NetworkAttributes;
+import io.opentelemetry.semconv.ServerAttributes;
+import io.opentelemetry.semconv.UrlAttributes;
 import io.opentelemetry.testing.internal.armeria.common.HttpStatus;
 import java.net.URI;
 import java.util.Arrays;
@@ -27,11 +30,11 @@ public abstract class HttpClientTestOptions {
       Collections.unmodifiableSet(
           new HashSet<>(
               Arrays.asList(
-                  SemanticAttributes.NETWORK_PROTOCOL_VERSION,
-                  SemanticAttributes.SERVER_ADDRESS,
-                  SemanticAttributes.SERVER_PORT,
-                  SemanticAttributes.URL_FULL,
-                  SemanticAttributes.HTTP_REQUEST_METHOD)));
+                  NetworkAttributes.NETWORK_PROTOCOL_VERSION,
+                  ServerAttributes.SERVER_ADDRESS,
+                  ServerAttributes.SERVER_PORT,
+                  UrlAttributes.URL_FULL,
+                  HttpAttributes.HTTP_REQUEST_METHOD)));
 
   public static final BiFunction<URI, String, String> DEFAULT_EXPECTED_CLIENT_SPAN_NAME_MAPPER =
       (uri, method) -> HttpConstants._OTHER.equals(method) ? "HTTP" : method;
@@ -86,6 +89,8 @@ public abstract class HttpClientTestOptions {
 
   public abstract boolean getTestNonStandardHttpMethod();
 
+  public abstract Function<URI, String> getHttpProtocolVersion();
+
   static Builder builder() {
     return new AutoValue_HttpClientTestOptions.Builder().withDefaults();
   }
@@ -113,7 +118,8 @@ public abstract class HttpClientTestOptions {
           .setTestCallback(true)
           .setTestCallbackWithParent(true)
           .setTestErrorWithCallback(true)
-          .setTestNonStandardHttpMethod(true);
+          .setTestNonStandardHttpMethod(true)
+          .setHttpProtocolVersion(uri -> "1.1");
     }
 
     Builder setHttpAttributes(Function<URI, Set<AttributeKey<?>>> value);
@@ -153,6 +159,8 @@ public abstract class HttpClientTestOptions {
     Builder setTestErrorWithCallback(boolean value);
 
     Builder setTestNonStandardHttpMethod(boolean value);
+
+    Builder setHttpProtocolVersion(Function<URI, String> value);
 
     @CanIgnoreReturnValue
     default Builder disableTestWithClientParent() {

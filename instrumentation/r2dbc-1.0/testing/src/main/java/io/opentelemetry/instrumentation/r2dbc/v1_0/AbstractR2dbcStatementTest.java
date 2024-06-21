@@ -6,15 +6,15 @@
 package io.opentelemetry.instrumentation.r2dbc.v1_0;
 
 import static io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.equalTo;
-import static io.opentelemetry.semconv.SemanticAttributes.DB_CONNECTION_STRING;
-import static io.opentelemetry.semconv.SemanticAttributes.DB_NAME;
-import static io.opentelemetry.semconv.SemanticAttributes.DB_OPERATION;
-import static io.opentelemetry.semconv.SemanticAttributes.DB_SQL_TABLE;
-import static io.opentelemetry.semconv.SemanticAttributes.DB_STATEMENT;
-import static io.opentelemetry.semconv.SemanticAttributes.DB_SYSTEM;
-import static io.opentelemetry.semconv.SemanticAttributes.DB_USER;
-import static io.opentelemetry.semconv.SemanticAttributes.SERVER_ADDRESS;
-import static io.opentelemetry.semconv.SemanticAttributes.SERVER_PORT;
+import static io.opentelemetry.semconv.ServerAttributes.SERVER_ADDRESS;
+import static io.opentelemetry.semconv.ServerAttributes.SERVER_PORT;
+import static io.opentelemetry.semconv.incubating.DbIncubatingAttributes.DB_CONNECTION_STRING;
+import static io.opentelemetry.semconv.incubating.DbIncubatingAttributes.DB_NAME;
+import static io.opentelemetry.semconv.incubating.DbIncubatingAttributes.DB_OPERATION;
+import static io.opentelemetry.semconv.incubating.DbIncubatingAttributes.DB_SQL_TABLE;
+import static io.opentelemetry.semconv.incubating.DbIncubatingAttributes.DB_STATEMENT;
+import static io.opentelemetry.semconv.incubating.DbIncubatingAttributes.DB_SYSTEM;
+import static io.opentelemetry.semconv.incubating.DbIncubatingAttributes.DB_USER;
 import static io.r2dbc.spi.ConnectionFactoryOptions.DATABASE;
 import static io.r2dbc.spi.ConnectionFactoryOptions.DRIVER;
 import static io.r2dbc.spi.ConnectionFactoryOptions.HOST;
@@ -124,6 +124,7 @@ public abstract class AbstractR2dbcStatementTest {
     }
   }
 
+  @SuppressWarnings("deprecation") // TODO DbIncubatingAttributes.DB_CONNECTION_STRING deprecation
   @ParameterizedTest(name = "{index}: {0}")
   @MethodSource("provideParameters")
   void testQueries(Parameter parameter) {
@@ -133,7 +134,7 @@ public abstract class AbstractR2dbcStatementTest {
         createProxyConnectionFactory(
             ConnectionFactoryOptions.builder()
                 .option(DRIVER, props.system)
-                .option(HOST, "localhost")
+                .option(HOST, container.getHost())
                 .option(PORT, port)
                 .option(USER, USER_DB)
                 .option(PASSWORD, PW_DB)
@@ -174,7 +175,7 @@ public abstract class AbstractR2dbcStatementTest {
                                 equalTo(DB_STATEMENT, parameter.expectedStatement),
                                 equalTo(DB_OPERATION, parameter.operation),
                                 equalTo(DB_SQL_TABLE, parameter.table),
-                                equalTo(SERVER_ADDRESS, "localhost"),
+                                equalTo(SERVER_ADDRESS, container.getHost()),
                                 equalTo(SERVER_PORT, port)),
                     span ->
                         span.hasName("child")

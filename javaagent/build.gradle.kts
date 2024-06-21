@@ -1,6 +1,8 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.github.jk1.license.filter.LicenseBundleNormalizer
 import com.github.jk1.license.render.InventoryMarkdownReportRenderer
+import org.spdx.sbom.gradle.SpdxSbomTask
+import java.util.UUID
 
 plugins {
   id("com.github.jk1.dependency-license-report")
@@ -8,6 +10,7 @@ plugins {
   id("otel.java-conventions")
   id("otel.publish-conventions")
   id("io.opentelemetry.instrumentation.javaagent-shadowing")
+  id("org.spdx.sbom")
 }
 
 description = "OpenTelemetry Javaagent"
@@ -34,10 +37,10 @@ val javaagentLibs by configurations.creating {
 listOf(baseJavaagentLibs, javaagentLibs).forEach {
   it.run {
     exclude("io.opentelemetry", "opentelemetry-api")
-    exclude("io.opentelemetry", "opentelemetry-api-events")
     exclude("io.opentelemetry.semconv", "opentelemetry-semconv")
-    // metrics advice API
-    exclude("io.opentelemetry", "opentelemetry-extension-incubator")
+    exclude("io.opentelemetry.semconv", "opentelemetry-semconv-incubating")
+    // events API and metrics advice API
+    exclude("io.opentelemetry", "opentelemetry-api-incubator")
   }
 }
 
@@ -48,8 +51,8 @@ val licenseReportDependencies by configurations.creating {
 
 dependencies {
   bootstrapLibs(project(":instrumentation-api"))
-  // opentelemetry-api is an api dependency of :instrumentation-api, but opentelemetry-api-events is not
-  bootstrapLibs("io.opentelemetry:opentelemetry-api-events")
+  // opentelemetry-api is an api dependency of :instrumentation-api, but opentelemetry-api-incubator is not
+  bootstrapLibs("io.opentelemetry:opentelemetry-api-incubator")
   bootstrapLibs(project(":instrumentation-api-incubator"))
   bootstrapLibs(project(":instrumentation-annotations-support"))
   bootstrapLibs(project(":javaagent-bootstrap"))
@@ -89,8 +92,7 @@ dependencies {
   testCompileOnly(project(":javaagent-bootstrap"))
   testCompileOnly(project(":javaagent-extension-api"))
 
-  testImplementation("com.google.guava:guava")
-  testImplementation("io.opentelemetry:opentelemetry-sdk")
+  testImplementation(project(":testing-common"))
   testImplementation("io.opentracing.contrib.dropwizard:dropwizard-opentracing:0.2.2")
 }
 
@@ -268,6 +270,39 @@ with(components["java"] as AdhocComponentWithVariants) {
     }
     withVariantsFromConfiguration(configurations["runtimeElements"]) {
       skip()
+    }
+  }
+}
+
+spdxSbom {
+  targets {
+    // Create a target to match the published jar name.
+    // This is used for the task name (spdxSbomFor<SbomName>)
+    // and output file (<sbomName>.spdx.json).
+    create("opentelemetry-javaagent") {
+      configurations.set(listOf("baseJavaagentLibs"))
+      scm {
+        uri.set("https://github.com/" + System.getenv("GITHUB_REPOSITORY"))
+        revision.set(System.getenv("GITHUB_SHA"))
+      }
+      document {
+        name.set("opentelemetry-javaagent")
+        namespace.set("https://opentelemetry.io/spdx/" + UUID.randomUUID())
+      }
+    }
+  }
+}
+tasks.withType<AbstractPublishToMaven> {
+  dependsOn("spdxSbom")
+}
+project.afterEvaluate {
+  tasks.withType<Sign>().configureEach {
+    mustRunAfter(tasks.withType<SpdxSbomTask>())
+  }
+  tasks.withType<PublishToMavenLocal>().configureEach {
+    this.publication.artifact("${layout.buildDirectory.get()}/spdx/opentelemetry-javaagent.spdx.json") {
+      classifier = "spdx"
+      extension = "json"
     }
   }
 }

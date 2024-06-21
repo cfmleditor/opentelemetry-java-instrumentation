@@ -6,13 +6,13 @@
 package io.opentelemetry.javaagent.instrumentation.hibernate.reactive.v2_0;
 
 import static io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.equalTo;
-import static io.opentelemetry.semconv.SemanticAttributes.DB_NAME;
-import static io.opentelemetry.semconv.SemanticAttributes.DB_OPERATION;
-import static io.opentelemetry.semconv.SemanticAttributes.DB_SQL_TABLE;
-import static io.opentelemetry.semconv.SemanticAttributes.DB_STATEMENT;
-import static io.opentelemetry.semconv.SemanticAttributes.DB_USER;
-import static io.opentelemetry.semconv.SemanticAttributes.SERVER_ADDRESS;
-import static io.opentelemetry.semconv.SemanticAttributes.SERVER_PORT;
+import static io.opentelemetry.semconv.ServerAttributes.SERVER_ADDRESS;
+import static io.opentelemetry.semconv.ServerAttributes.SERVER_PORT;
+import static io.opentelemetry.semconv.incubating.DbIncubatingAttributes.DB_NAME;
+import static io.opentelemetry.semconv.incubating.DbIncubatingAttributes.DB_OPERATION;
+import static io.opentelemetry.semconv.incubating.DbIncubatingAttributes.DB_SQL_TABLE;
+import static io.opentelemetry.semconv.incubating.DbIncubatingAttributes.DB_STATEMENT;
+import static io.opentelemetry.semconv.incubating.DbIncubatingAttributes.DB_USER;
 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
@@ -47,6 +47,7 @@ class HibernateReactiveTest {
 
   private static final Vertx vertx = Vertx.vertx();
   private static GenericContainer<?> container;
+  private static String host;
   private static int port;
   private static EntityManagerFactory entityManagerFactory;
   private static Mutiny.SessionFactory mutinySessionFactory;
@@ -64,7 +65,9 @@ class HibernateReactiveTest {
             .withStartupTimeout(Duration.ofMinutes(2));
     container.start();
 
+    host = container.getHost();
     port = container.getMappedPort(5432);
+    System.setProperty("db.host", host);
     System.setProperty("db.port", String.valueOf(port));
 
     entityManagerFactory =
@@ -297,10 +300,10 @@ class HibernateReactiveTest {
                             equalTo(DB_USER, USER_DB),
                             equalTo(
                                 DB_STATEMENT,
-                                "select v1_0.id,v1_0.name from Value v1_0 where v1_0.id=$?"),
+                                "select v1_0.id,v1_0.name from Value v1_0 where v1_0.id=$1"),
                             equalTo(DB_OPERATION, "SELECT"),
                             equalTo(DB_SQL_TABLE, "Value"),
-                            equalTo(SERVER_ADDRESS, "localhost"),
+                            equalTo(SERVER_ADDRESS, host),
                             equalTo(SERVER_PORT, port)),
                 span ->
                     span.hasName("callback")

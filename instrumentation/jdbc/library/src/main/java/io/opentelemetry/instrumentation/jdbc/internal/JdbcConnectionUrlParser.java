@@ -11,7 +11,6 @@ import static java.util.regex.Pattern.CASE_INSENSITIVE;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.opentelemetry.instrumentation.jdbc.internal.dbinfo.DbInfo;
-import io.opentelemetry.semconv.SemanticAttributes.DbSystemValues;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLDecoder;
@@ -667,8 +666,6 @@ public enum JdbcConnectionUrlParser {
     private static final String DEFAULT_USER = "SA";
     private static final int DEFAULT_PORT = 9001;
 
-    // TODO(anuraaga): Replace dbsystem with semantic convention
-    // https://github.com/open-telemetry/opentelemetry-specification/pull/1321
     @Override
     DbInfo.Builder doParse(String jdbcUrl, DbInfo.Builder builder) {
       String instance = null;
@@ -832,6 +829,62 @@ public enum JdbcConnectionUrlParser {
 
       return MODIFIED_URL_LIKE.doParse(jdbcUrl, builder);
     }
+  },
+  INFORMIX_SQLI("informix-sqli") {
+    private static final int DEFAULT_PORT = 9088;
+
+    @Override
+    DbInfo.Builder doParse(String jdbcUrl, DbInfo.Builder builder) {
+      builder = MODIFIED_URL_LIKE.doParse(jdbcUrl, builder);
+
+      DbInfo dbInfo = builder.build();
+      if (dbInfo.getPort() == null) {
+        builder.port(DEFAULT_PORT);
+      }
+
+      int hostIndex = jdbcUrl.indexOf("://");
+      if (hostIndex == -1) {
+        return builder;
+      }
+
+      int dbNameStartIndex = jdbcUrl.indexOf('/', hostIndex + 3);
+      if (dbNameStartIndex == -1) {
+        return builder;
+      }
+      int dbNameEndIndex = jdbcUrl.indexOf(':', dbNameStartIndex);
+      if (dbNameEndIndex == -1) {
+        dbNameEndIndex = jdbcUrl.length();
+      }
+      String name = jdbcUrl.substring(dbNameStartIndex + 1, dbNameEndIndex);
+      if (name.isEmpty()) {
+        builder.name(null);
+      } else {
+        builder.name(name);
+      }
+
+      return builder;
+    }
+  },
+
+  INFORMIX_DIRECT("informix-direct") {
+    private final Pattern pattern = Pattern.compile("://(.*?)(:|;|$)");
+
+    @Override
+    DbInfo.Builder doParse(String jdbcUrl, DbInfo.Builder builder) {
+      builder = MODIFIED_URL_LIKE.doParse(jdbcUrl, builder);
+      builder.host(null);
+      builder.port(null);
+
+      Matcher matcher = pattern.matcher(jdbcUrl);
+      if (matcher.find()) {
+        String name = matcher.group(1);
+        if (!name.isEmpty()) {
+          builder.name(name);
+        }
+      }
+
+      return builder;
+    }
   };
 
   private static final Logger logger = Logger.getLogger(JdbcConnectionUrlParser.class.getName());
@@ -989,7 +1042,7 @@ public enum JdbcConnectionUrlParser {
   }
 
   // see
-  // https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/trace/semantic_conventions/database.md
+  // https://github.com/open-telemetry/semantic-conventions/blob/main/docs/database/database-spans.md
   private static String toDbSystem(String type) {
     switch (type) {
       case "as400": // IBM AS400 Database
@@ -1001,6 +1054,10 @@ public enum JdbcConnectionUrlParser {
         return DbSystemValues.H2;
       case "hsqldb": // Hyper SQL Database
         return "hsqldb";
+      case "informix-sqli": // IBM Informix
+        return DbSystemValues.INFORMIX_SQLI;
+      case "informix-direct":
+        return DbSystemValues.INFORMIX_DIRECT;
       case "mariadb": // MariaDB
         return DbSystemValues.MARIADB;
       case "mysql": // MySQL
@@ -1018,5 +1075,23 @@ public enum JdbcConnectionUrlParser {
       default:
         return DbSystemValues.OTHER_SQL; // Unknown DBMS
     }
+  }
+
+  // copied from DbIncubatingAttributes
+  private static final class DbSystemValues {
+    static final String OTHER_SQL = "other_sql";
+    static final String MSSQL = "mssql";
+    static final String MYSQL = "mysql";
+    static final String ORACLE = "oracle";
+    static final String DB2 = "db2";
+    static final String INFORMIX_SQLI = "informix-sqli";
+    static final String INFORMIX_DIRECT = "informix-direct";
+    static final String POSTGRESQL = "postgresql";
+    static final String HANADB = "hanadb";
+    static final String DERBY = "derby";
+    static final String MARIADB = "mariadb";
+    static final String H2 = "h2";
+
+    private DbSystemValues() {}
   }
 }

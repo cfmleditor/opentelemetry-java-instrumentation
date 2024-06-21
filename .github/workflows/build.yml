@@ -12,8 +12,6 @@ jobs:
     uses: ./.github/workflows/build-common.yml
     secrets:
       GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-      GE_CACHE_USERNAME: ${{ secrets.GE_CACHE_USERNAME }}
-      GE_CACHE_PASSWORD: ${{ secrets.GE_CACHE_PASSWORD }}
 
   test-latest-deps:
     # release branches are excluded
@@ -23,8 +21,6 @@ jobs:
     uses: ./.github/workflows/reusable-test-latest-deps.yml
     secrets:
       GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-      GE_CACHE_USERNAME: ${{ secrets.GE_CACHE_USERNAME }}
-      GE_CACHE_PASSWORD: ${{ secrets.GE_CACHE_PASSWORD }}
 
   muzzle:
     # release branches are excluded
@@ -65,7 +61,7 @@ jobs:
     # skipping release branches because the versions in those branches are not snapshots
     if: github.ref_name == 'main' && github.repository == 'open-telemetry/opentelemetry-java-instrumentation'
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Free disk space
         run: .github/scripts/gha-free-disk-space.sh
@@ -74,7 +70,13 @@ jobs:
         uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4.2.1
         with:
           distribution: temurin
-          java-version: 17.0.6
+          java-version-file: .java-version
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@dbbdc275be76ac10734476cc723d82dfe7ec6eda # v3.4.2
+        with:
+          # gradle enterprise is used for the build cache
+          gradle-home-cache-excludes: caches/build-cache-1
 
       - name: Build and publish artifact snapshots
         env:
@@ -83,11 +85,7 @@ jobs:
           SONATYPE_KEY: ${{ secrets.SONATYPE_KEY }}
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSWORD: ${{ secrets.GPG_PASSWORD }}
-        uses: gradle/gradle-build-action@29c0906b64b8fc82467890bfb7a0a7ef34bda89e # v3.1.0
-        with:
-          arguments: assemble publishToSonatype
-          # gradle enterprise is used for the build cache
-          gradle-home-cache-excludes: caches/build-cache-1
+        run: ./gradlew assemble spdxSbom publishToSonatype
 
       - name: Build and publish gradle plugin snapshots
         env:
@@ -96,9 +94,5 @@ jobs:
           SONATYPE_KEY: ${{ secrets.SONATYPE_KEY }}
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSWORD: ${{ secrets.GPG_PASSWORD }}
-        uses: gradle/gradle-build-action@29c0906b64b8fc82467890bfb7a0a7ef34bda89e # v3.1.0
-        with:
-          build-root-directory: gradle-plugins
-          arguments: build publishToSonatype
-          # gradle enterprise is used for the build cache
-          gradle-home-cache-excludes: caches/build-cache-1
+        run: ./gradlew build publishToSonatype
+        working-directory: gradle-plugins

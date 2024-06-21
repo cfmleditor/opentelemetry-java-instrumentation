@@ -1,4 +1,3 @@
-import com.gradle.enterprise.gradleplugin.testretry.retry
 import io.opentelemetry.instrumentation.gradle.OtelJavaExtension
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import java.time.Duration
@@ -27,12 +26,15 @@ afterEvaluate {
 }
 
 // Version to use to compile code and run tests.
-val DEFAULT_JAVA_VERSION = JavaVersion.VERSION_17
+val DEFAULT_JAVA_VERSION = JavaVersion.VERSION_21
 
 java {
   toolchain {
     languageVersion.set(
-      otelJava.minJavaVersionSupported.map { JavaLanguageVersion.of(Math.max(it.majorVersion.toInt(), DEFAULT_JAVA_VERSION.majorVersion.toInt())) }
+      otelJava.minJavaVersionSupported.map {
+        val defaultJavaVersion = otelJava.maxJavaVersionSupported.getOrElse(DEFAULT_JAVA_VERSION).majorVersion.toInt()
+        JavaLanguageVersion.of(Math.max(it.majorVersion.toInt(), defaultJavaVersion))
+      }
     )
   }
 
@@ -69,11 +71,14 @@ tasks.withType<JavaCompile>().configureEach {
           "-Xlint:-processing",
           // We suppress the "options" warning because it prevents compilation on modern JDKs
           "-Xlint:-options",
-
-          // Fail build on any warning
-          "-Werror"
+          // jdk21 generates more serial warnings than previous versions
+          "-Xlint:-serial"
         )
       )
+      if (System.getProperty("dev") != "true") {
+        // Fail build on any warning
+        compilerArgs.add("-Werror")
+      }
     }
 
     encoding = "UTF-8"
@@ -81,6 +86,11 @@ tasks.withType<JavaCompile>().configureEach {
     if (name.contains("Test")) {
       // serialVersionUID is basically guaranteed to be useless in tests
       compilerArgs.add("-Xlint:-serial")
+      // when code is compiled with jdk 21 and executed with jdk 8, the -parameters flag is needed to avoid
+      // java.lang.reflect.MalformedParametersException: Invalid parameter name ""
+      // when junit calls java.lang.reflect.Executable.getParameters() on the constructor of a
+      // non-static nested test class
+      compilerArgs.add("-parameters")
     }
   }
 }
@@ -98,6 +108,17 @@ afterEvaluate {
   tasks.withType<ScalaCompile>().configureEach {
     sourceCompatibility = otelJava.minJavaVersionSupported.get().majorVersion
     targetCompatibility = otelJava.minJavaVersionSupported.get().majorVersion
+  }
+  tasks.withType<Javadoc>().configureEach {
+    with(options) {
+      source = otelJava.minJavaVersionSupported.get().majorVersion
+    }
+  }
+  tasks.withType<JavaCompile>().configureEach {
+    if (javaCompiler.isPresent && javaCompiler.get().metadata.languageVersion.canCompileOrRun(21)) {
+      // new warning in jdk21
+      options.compilerArgs.add("-Xlint:-this-escape")
+    }
   }
 }
 
@@ -122,7 +143,7 @@ abstract class NettyAlignmentRule : ComponentMetadataRule {
     with(ctx.details) {
       if (id.group == "io.netty" && id.name != "netty") {
         if (id.version.startsWith("4.1.")) {
-          belongsTo("io.netty:netty-bom:4.1.107.Final", false)
+          belongsTo("io.netty:netty-bom:4.1.111.Final", false)
         } else if (id.version.startsWith("4.0.")) {
           belongsTo("io.netty:netty-bom:4.0.56.Final", false)
         }
@@ -273,8 +294,12 @@ tasks {
   withType<AbstractArchiveTask>().configureEach {
     isPreserveFileTimestamps = false
     isReproducibleFileOrder = true
-    dirMode = Integer.parseInt("0755", 8)
-    fileMode = Integer.parseInt("0644", 8)
+    dirPermissions {
+      unix("755")
+    }
+    filePermissions {
+      unix("644")
+    }
   }
 
   // Convenient when updating errorprone
@@ -344,7 +369,7 @@ tasks.withType<Test>().configureEach {
   // This value is quite big because with lower values (3 mins) we were experiencing large number of false positives
   timeout.set(Duration.ofMinutes(15))
 
-  retry {
+  develocity.testRetry {
     // You can see tests that were retried by this mechanism in the collected test reports and build scans.
     if (System.getenv().containsKey("CI") || rootProject.hasProperty("retryTests")) {
       maxRetries.set(5)
@@ -407,7 +432,7 @@ codenarc {
 checkstyle {
   configFile = rootProject.file("buildscripts/checkstyle.xml")
   // this version should match the version of google_checks.xml used as basis for above configuration
-  toolVersion = "10.14.1"
+  toolVersion = "10.17.0"
   maxWarnings = 0
 }
 

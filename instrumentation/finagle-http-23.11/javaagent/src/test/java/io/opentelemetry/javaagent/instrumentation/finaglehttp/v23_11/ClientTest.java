@@ -22,13 +22,15 @@ import com.twitter.util.Time;
 import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 import io.netty.handler.timeout.ReadTimeoutException;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import io.opentelemetry.instrumentation.testing.junit.InstrumentationExtension;
 import io.opentelemetry.instrumentation.testing.junit.http.AbstractHttpClientTest;
 import io.opentelemetry.instrumentation.testing.junit.http.HttpClientInstrumentationExtension;
 import io.opentelemetry.instrumentation.testing.junit.http.HttpClientResult;
 import io.opentelemetry.instrumentation.testing.junit.http.HttpClientTestOptions;
 import io.opentelemetry.javaagent.instrumentation.finaglehttp.v23_11.Utils.ClientType;
-import io.opentelemetry.semconv.SemanticAttributes;
+import io.opentelemetry.semconv.ServerAttributes;
 import java.net.ConnectException;
 import java.net.URI;
 import java.util.Collections;
@@ -85,10 +87,11 @@ class ClientTest extends AbstractHttpClientTest<Request> {
     // push this onto a FuturePool for 2 reasons:
     //  1) forces the request handling onto a different thread, ensuring test accuracy
     //  2) using the default thread can mess with high concurrency scenarios
+    Context context = Context.current();
     return FuturePool.unboundedPool()
         .apply(
             () -> {
-              try {
+              try (Scope ignored = context.makeCurrent()) {
                 return Await.result(getClient(uri).apply(request));
               } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -159,7 +162,7 @@ class ClientTest extends AbstractHttpClientTest<Request> {
   @Override
   public int sendRequest(Request request, String method, URI uri, Map<String, String> headers)
       throws Exception {
-    return Await.result(doSendRequest(request, uri), Duration.fromSeconds(10)).statusCode();
+    return Await.result(doSendRequest(request, uri), Duration.fromSeconds(30)).statusCode();
   }
 
   @Override
@@ -189,8 +192,8 @@ class ClientTest extends AbstractHttpClientTest<Request> {
       return Collections.emptySet();
     }
     Set<AttributeKey<?>> attributes = new HashSet<>(HttpClientTestOptions.DEFAULT_HTTP_ATTRIBUTES);
-    attributes.remove(SemanticAttributes.SERVER_ADDRESS);
-    attributes.remove(SemanticAttributes.SERVER_PORT);
+    attributes.remove(ServerAttributes.SERVER_ADDRESS);
+    attributes.remove(ServerAttributes.SERVER_PORT);
     return attributes;
   }
 

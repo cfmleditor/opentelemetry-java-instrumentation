@@ -9,7 +9,7 @@ import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.instrumentation.testing.junit.http.AbstractHttpClientTest;
 import io.opentelemetry.instrumentation.testing.junit.http.HttpClientResult;
 import io.opentelemetry.instrumentation.testing.junit.http.HttpClientTestOptions;
-import io.opentelemetry.semconv.SemanticAttributes;
+import io.opentelemetry.semconv.NetworkAttributes;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -26,14 +26,16 @@ public abstract class AbstractJavaHttpClientTest extends AbstractHttpClientTest<
 
   @BeforeAll
   void setUp() {
-    HttpClient httpClient =
+    HttpClient.Builder httpClientBuilder =
         HttpClient.newBuilder()
-            .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(CONNECTION_TIMEOUT)
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .build();
+            .followRedirects(HttpClient.Redirect.NORMAL);
+    configureHttpClientBuilder(httpClientBuilder);
+    HttpClient httpClient = httpClientBuilder.build();
     client = configureHttpClient(httpClient);
   }
+
+  protected abstract void configureHttpClientBuilder(HttpClient.Builder httpClientBuilder);
 
   protected abstract HttpClient configureHttpClient(HttpClient httpClient);
 
@@ -91,7 +93,7 @@ public abstract class AbstractJavaHttpClientTest extends AbstractHttpClientTest<
           if ("http://localhost:61/".equals(uri.toString())
               || "https://192.0.2.1/".equals(uri.toString())
               || uri.toString().contains("/read-timeout")) {
-            attributes.remove(SemanticAttributes.NETWORK_PROTOCOL_VERSION);
+            attributes.remove(NetworkAttributes.NETWORK_PROTOCOL_VERSION);
           }
           return attributes;
         });

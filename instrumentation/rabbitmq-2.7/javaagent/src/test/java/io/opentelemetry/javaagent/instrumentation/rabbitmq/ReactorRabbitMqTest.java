@@ -10,10 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.instrumentation.api.semconv.network.internal.NetworkAttributes;
 import io.opentelemetry.instrumentation.testing.junit.AgentInstrumentationExtension;
 import io.opentelemetry.instrumentation.testing.junit.InstrumentationExtension;
-import io.opentelemetry.semconv.SemanticAttributes;
+import io.opentelemetry.semconv.NetworkAttributes;
+import io.opentelemetry.semconv.incubating.MessagingIncubatingAttributes;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -43,7 +43,7 @@ class ReactorRabbitMqTest extends AbstractRabbitMqTest {
                 span -> {
                   span.hasName("exchange.declare")
                       .hasKind(SpanKind.CLIENT)
-                      .hasAttribute(SemanticAttributes.MESSAGING_SYSTEM, "rabbitmq")
+                      .hasAttribute(MessagingIncubatingAttributes.MESSAGING_SYSTEM, "rabbitmq")
                       .hasAttribute(AttributeKey.stringKey("rabbitmq.command"), "exchange.declare")
                       .hasAttributesSatisfying(
                           attributes ->
@@ -52,11 +52,10 @@ class ReactorRabbitMqTest extends AbstractRabbitMqTest {
                                       attrs -> {
                                         String peerAddr =
                                             attrs.get(NetworkAttributes.NETWORK_PEER_ADDRESS);
-                                        assertThat(peerAddr)
-                                            .isIn("127.0.0.1", "0:0:0:0:0:0:0:1", null);
+                                        assertThat(peerAddr).isIn(rabbitMqIp, null);
 
                                         String networkType =
-                                            attrs.get(SemanticAttributes.NETWORK_TYPE);
+                                            attrs.get(NetworkAttributes.NETWORK_TYPE);
                                         assertThat(networkType).isIn("ipv4", "ipv6", null);
 
                                         assertNotNull(

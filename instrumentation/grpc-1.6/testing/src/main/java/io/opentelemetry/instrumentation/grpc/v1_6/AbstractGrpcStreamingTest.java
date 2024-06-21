@@ -19,23 +19,29 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.instrumentation.api.semconv.network.internal.NetworkAttributes;
+import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.instrumentation.testing.junit.InstrumentationExtension;
 import io.opentelemetry.instrumentation.testing.util.ThrowingRunnable;
-import io.opentelemetry.sdk.testing.assertj.EventDataAssert;
-import io.opentelemetry.semconv.SemanticAttributes;
+import io.opentelemetry.sdk.trace.data.EventData;
+import io.opentelemetry.semconv.NetworkAttributes;
+import io.opentelemetry.semconv.ServerAttributes;
+import io.opentelemetry.semconv.incubating.MessageIncubatingAttributes;
+import io.opentelemetry.semconv.incubating.RpcIncubatingAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.junitpioneer.jupiter.cartesian.CartesianTest;
 
 public abstract class AbstractGrpcStreamingTest {
@@ -147,25 +153,25 @@ public abstract class AbstractGrpcStreamingTest {
                 .sorted()
                 .collect(Collectors.toList()));
 
-    List<Consumer<EventDataAssert>> events = new ArrayList<>();
+    List<Consumer<EventData>> events = new ArrayList<>();
     for (int i = 1; i <= clientMessageCount * serverMessageCount + clientMessageCount; i++) {
       long messageId = i;
       events.add(
           event ->
-              event
+              assertThat(event)
                   .hasName("message")
                   .hasAttributesSatisfying(
                       attrs ->
                           assertThat(attrs)
                               .hasSize(2)
                               .hasEntrySatisfying(
-                                  SemanticAttributes.MESSAGE_TYPE,
+                                  MessageIncubatingAttributes.MESSAGE_TYPE,
                                   val ->
                                       assertThat(val)
                                           .satisfiesAnyOf(
                                               v -> assertThat(v).isEqualTo("RECEIVED"),
                                               v -> assertThat(v).isEqualTo("SENT")))
-                              .containsEntry(SemanticAttributes.MESSAGE_ID, messageId)));
+                              .containsEntry(MessageIncubatingAttributes.MESSAGE_ID, messageId)));
     }
 
     testing()
@@ -178,35 +184,42 @@ public abstract class AbstractGrpcStreamingTest {
                             .hasNoParent()
                             .hasAttributesSatisfyingExactly(
                                 addExtraClientAttributes(
-                                    equalTo(SemanticAttributes.RPC_SYSTEM, "grpc"),
-                                    equalTo(SemanticAttributes.RPC_SERVICE, "example.Greeter"),
-                                    equalTo(SemanticAttributes.RPC_METHOD, "Conversation"),
+                                    equalTo(RpcIncubatingAttributes.RPC_SYSTEM, "grpc"),
+                                    equalTo(RpcIncubatingAttributes.RPC_SERVICE, "example.Greeter"),
+                                    equalTo(RpcIncubatingAttributes.RPC_METHOD, "Conversation"),
                                     equalTo(
-                                        SemanticAttributes.RPC_GRPC_STATUS_CODE,
+                                        RpcIncubatingAttributes.RPC_GRPC_STATUS_CODE,
                                         (long) Status.Code.OK.value()),
-                                    equalTo(SemanticAttributes.SERVER_ADDRESS, "localhost"),
-                                    equalTo(
-                                        SemanticAttributes.SERVER_PORT, (long) server.getPort())))
-                            .hasEventsSatisfyingExactly(events.toArray(new Consumer[0])),
+                                    equalTo(ServerAttributes.SERVER_ADDRESS, "localhost"),
+                                    equalTo(ServerAttributes.SERVER_PORT, (long) server.getPort())))
+                            .satisfies(
+                                spanData ->
+                                    assertThat(spanData.getEvents())
+                                        .satisfiesExactlyInAnyOrder(
+                                            events.toArray(new Consumer[0]))),
                     span ->
                         span.hasName("example.Greeter/Conversation")
                             .hasKind(SpanKind.SERVER)
                             .hasParent(trace.getSpan(0))
                             .hasAttributesSatisfyingExactly(
-                                equalTo(SemanticAttributes.RPC_SYSTEM, "grpc"),
-                                equalTo(SemanticAttributes.RPC_SERVICE, "example.Greeter"),
-                                equalTo(SemanticAttributes.RPC_METHOD, "Conversation"),
+                                equalTo(RpcIncubatingAttributes.RPC_SYSTEM, "grpc"),
+                                equalTo(RpcIncubatingAttributes.RPC_SERVICE, "example.Greeter"),
+                                equalTo(RpcIncubatingAttributes.RPC_METHOD, "Conversation"),
                                 equalTo(
-                                    SemanticAttributes.RPC_GRPC_STATUS_CODE,
+                                    RpcIncubatingAttributes.RPC_GRPC_STATUS_CODE,
                                     (long) Status.Code.OK.value()),
-                                equalTo(SemanticAttributes.SERVER_ADDRESS, "localhost"),
-                                equalTo(SemanticAttributes.SERVER_PORT, server.getPort()),
-                                equalTo(SemanticAttributes.NETWORK_TYPE, "ipv4"),
+                                equalTo(ServerAttributes.SERVER_ADDRESS, "localhost"),
+                                equalTo(ServerAttributes.SERVER_PORT, server.getPort()),
+                                equalTo(NetworkAttributes.NETWORK_TYPE, "ipv4"),
                                 equalTo(NetworkAttributes.NETWORK_PEER_ADDRESS, "127.0.0.1"),
                                 satisfies(
                                     NetworkAttributes.NETWORK_PEER_PORT,
                                     val -> assertThat(val).isNotNull()))
-                            .hasEventsSatisfyingExactly(events.toArray(new Consumer[0]))));
+                            .satisfies(
+                                spanData ->
+                                    assertThat(spanData.getEvents())
+                                        .satisfiesExactlyInAnyOrder(
+                                            events.toArray(new Consumer[0])))));
     testing()
         .waitAndAssertMetrics(
             "io.opentelemetry.grpc-1.6",
@@ -222,15 +235,16 @@ public abstract class AbstractGrpcStreamingTest {
                                         point ->
                                             point.hasAttributesSatisfying(
                                                 equalTo(
-                                                    SemanticAttributes.SERVER_ADDRESS, "localhost"),
+                                                    ServerAttributes.SERVER_ADDRESS, "localhost"),
                                                 equalTo(
-                                                    SemanticAttributes.RPC_METHOD, "Conversation"),
+                                                    RpcIncubatingAttributes.RPC_METHOD,
+                                                    "Conversation"),
                                                 equalTo(
-                                                    SemanticAttributes.RPC_SERVICE,
+                                                    RpcIncubatingAttributes.RPC_SERVICE,
                                                     "example.Greeter"),
-                                                equalTo(SemanticAttributes.RPC_SYSTEM, "grpc"),
+                                                equalTo(RpcIncubatingAttributes.RPC_SYSTEM, "grpc"),
                                                 equalTo(
-                                                    SemanticAttributes.RPC_GRPC_STATUS_CODE,
+                                                    RpcIncubatingAttributes.RPC_GRPC_STATUS_CODE,
                                                     (long) Status.Code.OK.value()))))));
     testing()
         .waitAndAssertMetrics(
@@ -247,19 +261,105 @@ public abstract class AbstractGrpcStreamingTest {
                                         point ->
                                             point.hasAttributesSatisfying(
                                                 equalTo(
-                                                    SemanticAttributes.SERVER_ADDRESS, "localhost"),
+                                                    ServerAttributes.SERVER_ADDRESS, "localhost"),
                                                 equalTo(
-                                                    SemanticAttributes.SERVER_PORT,
-                                                    server.getPort()),
+                                                    ServerAttributes.SERVER_PORT, server.getPort()),
                                                 equalTo(
-                                                    SemanticAttributes.RPC_METHOD, "Conversation"),
+                                                    RpcIncubatingAttributes.RPC_METHOD,
+                                                    "Conversation"),
                                                 equalTo(
-                                                    SemanticAttributes.RPC_SERVICE,
+                                                    RpcIncubatingAttributes.RPC_SERVICE,
                                                     "example.Greeter"),
-                                                equalTo(SemanticAttributes.RPC_SYSTEM, "grpc"),
+                                                equalTo(RpcIncubatingAttributes.RPC_SYSTEM, "grpc"),
                                                 equalTo(
-                                                    SemanticAttributes.RPC_GRPC_STATUS_CODE,
+                                                    RpcIncubatingAttributes.RPC_GRPC_STATUS_CODE,
                                                     (long) Status.Code.OK.value()))))));
+  }
+
+  @Test
+  void grpcServerSpanEndsAfterChildSpan() throws Exception {
+    Tracer tracer = testing().getOpenTelemetry().getTracer("test");
+    AtomicBoolean serverSpanRecording = new AtomicBoolean();
+    CountDownLatch latch = new CountDownLatch(2);
+
+    BindableService greeter =
+        new GreeterGrpc.GreeterImplBase() {
+          @Override
+          public StreamObserver<Helloworld.Response> conversation(
+              StreamObserver<Helloworld.Response> observer) {
+            return new StreamObserver<Helloworld.Response>() {
+              Span span;
+
+              @Override
+              public void onNext(Helloworld.Response value) {
+                span = tracer.spanBuilder("child").startSpan();
+                observer.onNext(value);
+              }
+
+              @Override
+              public void onError(Throwable t) {
+                observer.onError(t);
+                span.end();
+              }
+
+              @Override
+              public void onCompleted() {
+                observer.onCompleted();
+                serverSpanRecording.set(Span.current().isRecording());
+                span.end();
+                latch.countDown();
+              }
+            };
+          }
+        };
+
+    Server server = configureServer(ServerBuilder.forPort(0).addService(greeter)).build().start();
+    ManagedChannel channel = createChannel(server);
+    closer.add(() -> channel.shutdownNow().awaitTermination(10, TimeUnit.SECONDS));
+    closer.add(() -> server.shutdownNow().awaitTermination());
+
+    GreeterGrpc.GreeterStub client = GreeterGrpc.newStub(channel).withWaitForReady();
+
+    StreamObserver<Helloworld.Response> observer2 =
+        client.conversation(
+            new StreamObserver<Helloworld.Response>() {
+              @Override
+              public void onNext(Helloworld.Response value) {}
+
+              @Override
+              public void onError(Throwable t) {}
+
+              @Override
+              public void onCompleted() {
+                latch.countDown();
+              }
+            });
+
+    Helloworld.Response message = Helloworld.Response.newBuilder().setMessage("message").build();
+    observer2.onNext(message);
+    observer2.onCompleted();
+
+    latch.await(10, TimeUnit.SECONDS);
+
+    // server span should end after child span
+    assertThat(serverSpanRecording).isTrue();
+
+    testing()
+        .waitAndAssertTraces(
+            trace ->
+                trace.hasSpansSatisfyingExactly(
+                    span ->
+                        span.hasName("example.Greeter/Conversation")
+                            .hasKind(SpanKind.CLIENT)
+                            .hasNoParent(),
+                    span ->
+                        span.hasName("example.Greeter/Conversation")
+                            .hasKind(SpanKind.SERVER)
+                            .hasParent(trace.getSpan(0)),
+                    span ->
+                        span.hasName("child")
+                            .hasKind(SpanKind.INTERNAL)
+                            .hasParent(trace.getSpan(1))));
   }
 
   private ManagedChannel createChannel(Server server) throws Exception {

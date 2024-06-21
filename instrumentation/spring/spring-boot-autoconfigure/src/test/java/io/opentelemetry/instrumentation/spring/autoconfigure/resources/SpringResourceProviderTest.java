@@ -5,18 +5,17 @@
 
 package io.opentelemetry.instrumentation.spring.autoconfigure.resources;
 
-import static io.opentelemetry.semconv.ResourceAttributes.SERVICE_NAME;
-import static io.opentelemetry.semconv.ResourceAttributes.SERVICE_VERSION;
-
 import io.opentelemetry.instrumentation.spring.autoconfigure.OpenTelemetryAutoConfiguration;
-import io.opentelemetry.instrumentation.spring.autoconfigure.properties.OtelResourceProperties;
-import io.opentelemetry.instrumentation.spring.autoconfigure.properties.OtlpExporterProperties;
-import io.opentelemetry.instrumentation.spring.autoconfigure.properties.PropagationProperties;
-import io.opentelemetry.instrumentation.spring.autoconfigure.properties.SpringConfigProperties;
+import io.opentelemetry.instrumentation.spring.autoconfigure.internal.properties.OtelResourceProperties;
+import io.opentelemetry.instrumentation.spring.autoconfigure.internal.properties.OtlpExporterProperties;
+import io.opentelemetry.instrumentation.spring.autoconfigure.internal.properties.PropagationProperties;
+import io.opentelemetry.instrumentation.spring.autoconfigure.internal.properties.SpringConfigProperties;
+import io.opentelemetry.instrumentation.spring.autoconfigure.internal.resources.SpringResourceProvider;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
 import io.opentelemetry.sdk.testing.assertj.AttributesAssert;
 import io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions;
+import io.opentelemetry.semconv.ServiceAttributes;
 import java.util.Collections;
 import java.util.Properties;
 import org.junit.jupiter.api.DisplayName;
@@ -43,7 +42,8 @@ public class SpringResourceProviderTest {
         .withPropertyValues("spring.application.name=myapp-backend")
         .run(
             context ->
-                assertResourceAttributes(context).containsEntry(SERVICE_NAME, "myapp-backend"));
+                assertResourceAttributes(context)
+                    .containsEntry(ServiceAttributes.SERVICE_NAME, "myapp-backend"));
   }
 
   @Test
@@ -58,8 +58,8 @@ public class SpringResourceProviderTest {
         .run(
             context ->
                 assertResourceAttributes(context)
-                    .containsEntry(SERVICE_NAME, "demo")
-                    .containsEntry(SERVICE_VERSION, "0.3"));
+                    .containsEntry(ServiceAttributes.SERVICE_NAME, "demo")
+                    .containsEntry(ServiceAttributes.SERVICE_VERSION, "0.3"));
   }
 
   private static AttributesAssert assertResourceAttributes(AssertableApplicationContext context) {

@@ -63,10 +63,28 @@ public final class ApplicationOpenTelemetry127 implements OpenTelemetry {
   }
 
   private static ApplicationMeterFactory getMeterFactory() {
-    // this class is defined in opentelemetry-api-1.32
+    // this class is defined in opentelemetry-api-1.38
     ApplicationMeterFactory meterFactory =
         getMeterFactory(
-            "io.opentelemetry.javaagent.instrumentation.opentelemetryapi.v1_32.incubator.metrics.ApplicationMeterFactory132Incubator");
+            "io.opentelemetry.javaagent.instrumentation.opentelemetryapi.v1_38.incubator.metrics.ApplicationMeterFactory138Incubator");
+    if (meterFactory == null) {
+      // this class is defined in opentelemetry-api-1.38
+      meterFactory =
+          getMeterFactory(
+              "io.opentelemetry.javaagent.instrumentation.opentelemetryapi.v1_38.metrics.ApplicationMeterFactory138");
+    }
+    if (meterFactory == null) {
+      // this class is defined in opentelemetry-api-1.37
+      meterFactory =
+          getMeterFactory(
+              "io.opentelemetry.javaagent.instrumentation.opentelemetryapi.v1_37.incubator.metrics.ApplicationMeterFactory137");
+    }
+    if (meterFactory == null) {
+      // this class is defined in opentelemetry-api-1.32
+      meterFactory =
+          getMeterFactory(
+              "io.opentelemetry.javaagent.instrumentation.opentelemetryapi.v1_32.incubator.metrics.ApplicationMeterFactory132Incubator");
+    }
     if (meterFactory == null) {
       // this class is defined in opentelemetry-api-1.32
       meterFactory =
@@ -77,7 +95,7 @@ public final class ApplicationOpenTelemetry127 implements OpenTelemetry {
       // this class is defined in opentelemetry-api-1.31
       meterFactory =
           getMeterFactory(
-              "io.opentelemetry.javaagent.instrumentation.opentelemetryapi.v1_31.metrics.ApplicationMeterFactory131");
+              "io.opentelemetry.javaagent.instrumentation.opentelemetryapi.v1_31.incubator.metrics.ApplicationMeterFactory131");
     }
     if (meterFactory == null) {
       meterFactory = new ApplicationMeterFactory115();

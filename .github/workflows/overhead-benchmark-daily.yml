@@ -9,9 +9,9 @@ jobs:
   run-overhead-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           ref: gh-pages
           path: gh-pages
@@ -23,11 +23,12 @@ jobs:
         run: |
           rsync -avv gh-pages/benchmark-overhead/results/ benchmark-overhead/results/
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@dbbdc275be76ac10734476cc723d82dfe7ec6eda # v3.4.2
+
       - name: Run tests
-        uses: gradle/gradle-build-action@29c0906b64b8fc82467890bfb7a0a7ef34bda89e # v3.1.0
-        with:
-          arguments: test
-          build-root-directory: benchmark-overhead
+        working-directory: benchmark-overhead
+        run: ./gradlew test
 
       - name: Inspect the results dir
         working-directory: benchmark-overhead

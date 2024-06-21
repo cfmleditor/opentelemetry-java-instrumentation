@@ -8,7 +8,7 @@ and discuss your ideas or propose the changes you wish to make.
 
 ## Building
 
-This project requires Java 17 to build and run tests. Newer JDK's may work, but this version is used in CI.
+This project requires Java 21 to build and run tests. Newer JDK's may work, but this version is used in CI.
 
 Some instrumentations and tests may put constraints on which java versions they support.
 See [Running the tests](./docs/contributing/running-tests.md) for more details.
@@ -22,7 +22,7 @@ the Sonatype OSS snapshots repository at `https://oss.sonatype.org/content/repos
 
 ### Building from source
 
-Build using Java 17:
+Build using Java 21:
 
 ```bash
 java -version
@@ -79,10 +79,10 @@ See [Understanding Muzzle](docs/contributing/muzzle.md)
 ## Troubleshooting PR build failures
 
 The build logs are very long and there is a lot of parallelization, so the logs can be hard to
-decipher, but if you scroll to the bottom you should see something like:
+decipher, but if you expand the "Build scan" step, you should see something like:
 
 ```
-Publishing build scan...
+Run cat build-scan.txt
 https://gradle.com/s/ila4qwp5lcf5s
 ```
 
