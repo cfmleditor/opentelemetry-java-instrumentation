@@ -5,7 +5,7 @@
 
 package io.cfmleditor.javaagent;
 
-import static java.util.Collections.singletonList;
+import static java.util.Arrays.asList;
 
 import com.google.auto.service.AutoService;
 import io.opentelemetry.javaagent.extension.instrumentation.InstrumentationModule;
@@ -17,14 +17,17 @@ import java.util.List;
  * response.
  */
 @AutoService(InstrumentationModule.class)
-public final class HttpCfmlPageInstrumentationModule extends InstrumentationModule {
-  public HttpCfmlPageInstrumentationModule() {
+public final class CFPageInstrumentationModule extends InstrumentationModule {
+  public CFPageInstrumentationModule() {
     super("acf", "cfml");
   }
 
   @Override
   public List<TypeInstrumentation> typeInstrumentations() {
-    return singletonList(new HttpCfmlPageInstrumentation());
+    return asList(
+        new CFMServletInstrumentation(),
+        new CFPageInstrumentation(),
+        new UDFMethodInstrumentation());
   }
 
   @Override

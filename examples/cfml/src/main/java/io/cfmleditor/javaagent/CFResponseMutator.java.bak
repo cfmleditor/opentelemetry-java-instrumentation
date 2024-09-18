@@ -1,0 +1,16 @@
+
+package io.cfmleditor.javaagent;
+
+import io.opentelemetry.javaagent.bootstrap.http.HttpServerResponseMutator;
+import javax.servlet.http.HttpServletResponse;
+
+public class CFResponseMutator implements HttpServerResponseMutator<HttpServletResponse> {
+  public static final CFResponseMutator INSTANCE = new CFResponseMutator();
+
+  private CFResponseMutator() {}
+
+  @Override
+  public void appendHeader(HttpServletResponse response, String name, String value) {
+    response.addHeader(name, value);
+  }
+}
