@@ -13,15 +13,15 @@ import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter;
 import io.opentelemetry.instrumentation.api.instrumenter.SpanKindExtractor;
 import io.opentelemetry.javaagent.bootstrap.internal.ExperimentalConfig;
 import javax.annotation.Nullable;
-import org.apache.catalina.connector.ResponseFacade;
+import javax.servlet.ServletResponse;
 
 public class CFMServletInstrumentationSingletons {
 
-  private static final Instrumenter<ResponseFacade, Void> INSTRUMENTER;
+  private static final Instrumenter<ServletResponse, Void> INSTRUMENTER;
 
   static {
     INSTRUMENTER =
-        Instrumenter.<ResponseFacade, Void>builder(
+        Instrumenter.<ServletResponse, Void>builder(
                 GlobalOpenTelemetry.get(),
                 "io.cfmleditor.javaagent",
                 CFMServletInstrumentationSingletons::spanNameOnRender)
@@ -30,22 +30,22 @@ public class CFMServletInstrumentationSingletons {
             .buildInstrumenter(SpanKindExtractor.alwaysInternal());
   }
 
-  private static String spanNameOnRender(ResponseFacade response) {
+  private static String spanNameOnRender(ServletResponse response) {
     return "CFMServlet ";
   }
 
-  public static Instrumenter<ResponseFacade, Void> instrumenter() {
+  public static Instrumenter<ServletResponse, Void> instrumenter() {
     return INSTRUMENTER;
   }
 
   private CFMServletInstrumentationSingletons() {}
 
   private static class RenderAttributesExtractor
-      implements AttributesExtractor<ResponseFacade, Void> {
+      implements AttributesExtractor<ServletResponse, Void> {
 
     @Override
     public void onStart(
-        AttributesBuilder attributes, Context parentContext, ResponseFacade response) {
+        AttributesBuilder attributes, Context parentContext, ServletResponse response) {
       return;
     }
 
@@ -53,7 +53,7 @@ public class CFMServletInstrumentationSingletons {
     public void onEnd(
         AttributesBuilder attributes,
         Context context,
-        @Nullable ResponseFacade response,
+        @Nullable ServletResponse response,
         @Nullable Void unused,
         @Nullable Throwable error) {}
   }

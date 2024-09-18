@@ -12,14 +12,16 @@ import static net.bytebuddy.matcher.ElementMatchers.takesArgument;
 
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
+import io.opentelemetry.instrumentation.api.semconv.http.HttpServerRoute;
+import io.opentelemetry.instrumentation.api.semconv.http.HttpServerRouteSource;
 import io.opentelemetry.javaagent.bootstrap.Java8BytecodeBridge;
 import io.opentelemetry.javaagent.extension.instrumentation.TypeInstrumentation;
 import io.opentelemetry.javaagent.extension.instrumentation.TypeTransformer;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import net.bytebuddy.asm.Advice;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
-import org.apache.catalina.connector.RequestFacade;
-import org.apache.catalina.connector.ResponseFacade;
 
 public class CFMServletInstrumentation implements TypeInstrumentation {
 
@@ -30,11 +32,11 @@ public class CFMServletInstrumentation implements TypeInstrumentation {
 
   @Override
   public void transform(TypeTransformer transformer) {
-    // System.out.printf("CFMServletAdvice");
+    System.out.printf("CFMServletAdvice");
     transformer.applyAdviceToMethod(
         named("service")
-            .and(takesArgument(0, named("org.apache.catalina.connector.RequestFacade")))
-            .and(takesArgument(1, named("org.apache.catalina.connector.ResponseFacade")))
+            .and(takesArgument(0, named("javax.servlet.ServletRequest")))
+            .and(takesArgument(1, named("javax.servlet.ServletResponse")))
             .and(isPublic()),
         CFMServletInstrumentation.class.getName() + "$CFMServletAdvice");
   }
@@ -44,10 +46,11 @@ public class CFMServletInstrumentation implements TypeInstrumentation {
 
     @Advice.OnMethodEnter(suppress = Throwable.class)
     public static void onEnter(
-        @Advice.Argument(0) RequestFacade request,
-        @Advice.Argument(1) ResponseFacade response,
+        @Advice.Argument(0) ServletRequest request,
+        @Advice.Argument(1) ServletResponse response,
         @Advice.Local("otelContext") Context context,
         @Advice.Local("otelScope") Scope scope) {
+      System.out.printf("CFMServletAdvice:onEnter");
       Context parentContext = Java8BytecodeBridge.currentContext();
       if (!instrumenter().shouldStart(parentContext, response)) {
         return;
@@ -58,14 +61,14 @@ public class CFMServletInstrumentation implements TypeInstrumentation {
     }
 
     @Advice.OnMethodExit(onThrowable = Throwable.class, suppress = Throwable.class)
-    public static void stopSpan(
-        @Advice.Argument(0) RequestFacade request,
-        @Advice.Argument(1) ResponseFacade response,
+    public static void onExit(
+        @Advice.Argument(0) ServletRequest request,
+        @Advice.Argument(1) ServletResponse response,
         @Advice.Thrown Throwable throwable,
         @Advice.Local("otelContext") Context context,
         @Advice.Local("otelScope") Scope scope) {
-
-      // HttpServerRoute.update(context, HttpServerRouteSource.SERVER, "test");
+      System.out.printf("CFMServletAdvice:onExit");
+      HttpServerRoute.update(context, HttpServerRouteSource.SERVER, "test");
 
       if (scope == null) {
         return;
