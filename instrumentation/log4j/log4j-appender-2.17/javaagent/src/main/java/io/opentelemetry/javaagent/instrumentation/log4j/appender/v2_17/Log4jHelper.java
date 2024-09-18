@@ -9,9 +9,11 @@ import static java.util.Collections.emptyList;
 
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.logs.LogRecordBuilder;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.instrumentation.api.incubator.config.internal.InstrumentationConfig;
 import io.opentelemetry.instrumentation.log4j.appender.v2_17.internal.ContextDataAccessor;
 import io.opentelemetry.instrumentation.log4j.appender.v2_17.internal.LogEventMapper;
-import io.opentelemetry.javaagent.bootstrap.internal.InstrumentationConfig;
+import io.opentelemetry.javaagent.bootstrap.internal.AgentInstrumentationConfig;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +32,7 @@ public final class Log4jHelper {
   private static final boolean captureExperimentalAttributes;
 
   static {
-    InstrumentationConfig config = InstrumentationConfig.get();
+    InstrumentationConfig config = AgentInstrumentationConfig.get();
 
     captureExperimentalAttributes =
         config.getBoolean("otel.instrumentation.log4j-appender.experimental-log-attributes", false);
@@ -76,7 +78,15 @@ public final class Log4jHelper {
       threadId = currentThread.getId();
     }
     mapper.mapLogEvent(
-        builder, message, level, marker, throwable, contextData, threadName, threadId);
+        builder,
+        message,
+        level,
+        marker,
+        throwable,
+        contextData,
+        threadName,
+        threadId,
+        Context.current());
     builder.setTimestamp(Instant.now());
     builder.emit();
   }
@@ -86,12 +96,12 @@ public final class Log4jHelper {
 
     @Override
     @Nullable
-    public Object getValue(Map<String, String> contextData, String key) {
+    public String getValue(Map<String, String> contextData, String key) {
       return contextData.get(key);
     }
 
     @Override
-    public void forEach(Map<String, String> contextData, BiConsumer<String, Object> action) {
+    public void forEach(Map<String, String> contextData, BiConsumer<String, String> action) {
       contextData.forEach(action);
     }
   }

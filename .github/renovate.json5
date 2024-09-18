@@ -12,10 +12,18 @@
   "separateMinorPatch": true,
   "packageRules": [
     {
+      // this is to reduce the number of renovate PRs by consolidating them into a weekly batch
+      "matchManagers": ["github-actions"],
+      "extends": ["schedule:weekly"],
+      "groupName": "github actions",
+      "separateMinorPatch": false // overrides separateMinorPatch specified above
+    },
+    {
       "matchPackageNames": [
         "io.opentelemetry.contrib:opentelemetry-aws-resources",
         "io.opentelemetry.contrib:opentelemetry-aws-xray-propagator",
         "io.opentelemetry.contrib:opentelemetry-gcp-resources",
+        "io.opentelemetry.contrib:opentelemetry-baggage-processor",
         "io.opentelemetry.proto:opentelemetry-proto",
         "io.opentelemetry.semconv:opentelemetry-semconv"
       ],
@@ -116,7 +124,7 @@
       ],
       "matchPackageNames": [
         "org.slf4j:slf4j-api",
-        "org.springframework.boot",
+        "org.springframework.boot:org.springframework.boot.gradle.plugin", // this is for plugin id "org.springframework.boot"
         "org.springframework.boot:spring-boot-dependencies"],
       "matchUpdateTypes": ["major", "minor"],
       "enabled": false,
@@ -155,7 +163,7 @@
     {
       // intentionally using scala 2.11 in otel.scala-conventions.gradle.kts
       "matchFileNames": ["conventions/src/main/kotlin/otel.scala-conventions.gradle.kts"],
-      "matchPackagePrefixes": ["org.scala-lang:scala-library"],
+      "matchPackageNames": ["org.scala-lang:scala-library"],
       "matchUpdateTypes": ["major", "minor"],
       "enabled": false
     },

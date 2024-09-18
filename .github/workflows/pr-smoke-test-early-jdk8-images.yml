@@ -1,0 +1,35 @@
+name: PR build early jdk8 images for smoke tests
+
+on:
+  pull_request:
+    paths:
+      - "smoke-tests/images/early-jdk8/**"
+      - ".github/workflows/pr-smoke-test-early-jdk8-images.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Free disk space
+        run: .github/scripts/gha-free-disk-space.sh
+
+      - name: Set up JDK for running Gradle
+        uses: actions/setup-java@2dfa2011c5b2a0f1489bf9e433881c92c1631f88 # v4.3.0
+        with:
+          distribution: temurin
+          java-version-file: .java-version
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@d156388eb19639ec20ade50009f3d199ce1e2808 # v4.1.0
+        with:
+          cache-read-only: true
+          # gradle enterprise is used for the build cache
+          gradle-home-cache-excludes: caches/build-cache-1
+
+      - name: Build Docker image
+        run: ./gradlew :smoke-tests:images:early-jdk8:imageBuild
